@@ -7,6 +7,8 @@ import torch
 from matplotlib import pyplot as plt
 import pandas as pd
 
+__all__ = ['Logger', ]
+
 
 @attr.s
 class Logger:
@@ -30,16 +32,20 @@ class Logger:
         except:
             pass
 
-    def load_model(self) -> Optional[tuple[int, dict, dict, dict]]:
+    def load_model(self) -> dict | None:
         if self.info == "test":
             return
         file = self.path / "train.pth"
         if file.exists():
             return torch.load(file)
 
-    def save_model(self, epoch, model, scheduler, optimizer) -> None:
-        file = self.path / "train.pth"
-        torch.save((epoch, model.state_dict(), scheduler.state_dict(), optimizer.state_dict()), file)
+    def save_model(self, epoch, model, optimizer, scheduler) -> None:
+        torch.save({
+            'epoch': epoch,
+            'model': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict(),
+        }, self.path / 'train.pth')
 
     def write_epoch(self, *args):
         epoch_file = self.path / "epoch.csv"

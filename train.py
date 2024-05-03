@@ -15,9 +15,20 @@ optimizer = torch.optim.RMSprop(model.parameters())
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 5)
 criterion = torch.nn.CrossEntropyLoss()
 
-bridge = Bridge()
-loader = DataLoader(bridge, 4, True, worker_init_fn=2)
-device = torch.device('cuda')
+train_set = Bridge(train=True)
+train_loader = DataLoader(train_set, 64, True, worker_init_fn=2)
 output = Path('~/data/result').expanduser()
-logger = Logger(output, 'test')
-fit(model, scheduler, optimizer, criterion, loader, loader, loader, 1000, device, output, logger)
+logger = Logger(output, 'bridge/unet')
+
+fit(
+    logger = logger,
+    model = model,
+    optimizer = optimizer,
+    scheduler = scheduler,
+    criterion = criterion,
+    train_loader = train_loader,
+    valid_loader = train_loader,
+    test_loader = train_loader,
+    epochs = 100,
+    device = torch.device('cuda'),
+)
