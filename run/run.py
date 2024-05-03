@@ -1,10 +1,9 @@
 import time
-from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
-import torchvision.transforms as T
+import torchvision.transforms.functional as TF
 from PIL import Image
 from torch.utils.data import DataLoader
 
@@ -32,6 +31,7 @@ def train(
         optimizer.step()
     return loss_total / len(loader)
 
+
 @torch.no_grad()
 def valid(
     model: nn.Module,
@@ -48,6 +48,7 @@ def valid(
         loss_total += loss
     return loss_total / len(loader)
 
+
 @torch.no_grad()
 def test(
     logger: Logger,
@@ -63,22 +64,22 @@ def test(
         x, y = x.to(device), y.to(device)
         out = model(x)
 
-        for idx, (data, gt, pred) in enumerate(zip(x, y, out)):
+        for idx, (data, frame, pred) in enumerate(zip(x, y, out)):
             index = batch_idx * loader.batch_size + idx
 
-            data = T.ToPILImage()(data)
-            data.save(folder / f'{index:03d}_x.png')
+            data = TF.resize(data, 1280)
+            data = TF.to_pil_image(data)
+            data.save(folder / f'{frame:03d}_x.png')
 
-            gt = gt.cpu().numpy()[0].astype(np.uint8)
-            Image.fromarray(gt * 126, mode='L').save(folder / f'{index:03d}_y.png')
-
+            pred = TF.resize(pred, 1280)
             pred = pred.cpu().numpy().argmax(0).astype(np.uint8)
-            Image.fromarray(pred * 126, mode='L').save(folder / f'{index:03d}_z.png')
+            Image.fromarray(
+                pred * 126, mode='L').save(folder / f'{frame:03d}_z.png')
 
 
 def fit(
     logger: Logger,
-    model: nn.Module, 
+    model: nn.Module,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler,
     criterion: nn.Module,
@@ -109,5 +110,6 @@ def fit(
         logger.write_epoch(epoch + 1, train_loss, valid_loss, t1 - t0)
         logger.save_model(epoch + 1, model, optimizer, scheduler)
 
-        if test_loader is None or epoch % 50 > 0: continue
+        if test_loader is None or epoch % 50 > 0:
+            continue
         test(logger, epoch, model, test_loader, device)

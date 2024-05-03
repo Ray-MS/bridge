@@ -1,5 +1,7 @@
+import random
 from pathlib import Path
 
+import cv2
 import monai.transforms as MT
 import numpy as np
 import torch
@@ -7,12 +9,12 @@ import torchvision.transforms as T
 from einops import rearrange
 from PIL import Image
 from torch import Tensor
-from torch.utils.data import Dataset
+from torchvision.datasets import VisionDataset
 
-__all__ = ['Bridge', ]
+__all__ = ['Bridge', 'BridgeTest', ]
 
 
-class Bridge(Dataset):
+class Bridge(VisionDataset):
     def __init__(
         self,
         root: Path | str = '~/data/data',
@@ -30,7 +32,8 @@ class Bridge(Dataset):
     def _load_train_data(self) -> tuple[list, list]:
         data, targets = [], []
         for file in self.label_folder.iterdir():
-            if not file.name.endswith('.png'): continue
+            if not file.name.endswith('.png'):
+                continue
 
             label = Image.open(file).convert('L')
             label = np.array(label)
@@ -69,3 +72,33 @@ class Bridge(Dataset):
 
     def __len__(self) -> int:
         return len(self.data)
+
+
+class BridgeTest(VisionDataset):
+    def __init__(
+        self,
+        root: Path | str = '~/data/data',
+        len: int = 1000,
+    ) -> None:
+        self.root = Path(root, 'bridge').expanduser()
+        self.cap = cv2.VideoCapture(self.video.as_posix())
+        self.idx = (random.randint(0, 40000) for _ in range(len))
+
+    @property
+    def video(self) -> Path:
+        return self.root / '1713526207.mp4'
+
+    def __getitem__(self, index: int) -> tuple[int, Tensor]:
+        frame = self.idx[index]
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
+        _, img = self.cap.read()
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = T.ToTensor()(img)
+        transform = MT.Compose([
+            MT.CenterSpatialCrop(1280),
+            MT.Resize((224, 224)),
+        ])
+        return transform(img), frame
+
+    def __len__(self) -> int:
+        return len(self.idx)
