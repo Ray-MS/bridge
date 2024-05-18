@@ -113,3 +113,4 @@ def fit(
         if test_loader is None or epoch % 50 > 0:
             continue
         test(logger, epoch, model, test_loader, device)
+    test(logger, e0, model, test_loader, device)
