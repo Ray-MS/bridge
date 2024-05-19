@@ -11,7 +11,7 @@ __all__ = ['Logger', ]
 
 
 @attr.s
-class Logger:
+class Logger():
     root = attr.ib(type=Path | str)
     info = attr.ib(type=Optional[str], default=None)
 
@@ -19,6 +19,10 @@ class Logger:
         self.info = self.info or time.strftime("%y%m%d%H%M")
         self.path = Path(self.root, self.info)
         self.path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def checkpoint_file(self) -> Path:
+        return self.path / 'train.pth'
 
     def draw_loss(self) -> None:
         try:
@@ -35,9 +39,8 @@ class Logger:
     def load_model(self) -> dict | None:
         if self.info == "test":
             return
-        file = self.path / "train.pth"
-        if file.exists():
-            return torch.load(file)
+        if self.checkpoint_file.exists():
+            return torch.load(self.checkpoint_file)
 
     def save_model(self, epoch, model, optimizer, scheduler) -> None:
         torch.save({
@@ -45,7 +48,7 @@ class Logger:
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'scheduler': scheduler.state_dict(),
-        }, self.path / 'train.pth')
+        }, self.checkpoint_file)
 
     def write_epoch(self, *args):
         epoch_file = self.path / "epoch.csv"

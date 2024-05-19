@@ -110,7 +110,8 @@ def fit(
         logger.write_epoch(epoch + 1, train_loss, valid_loss, t1 - t0)
         logger.save_model(epoch + 1, model, optimizer, scheduler)
 
-        if test_loader is None or epoch % 50 > 0:
-            continue
-        test(logger, epoch, model, test_loader, device)
-    test(logger, e0, model, test_loader, device)
+        if test_loader is not None and epoch % 50 == 0:
+            test(logger, epoch, model, test_loader, device)
+
+    if test_loader is not None:
+        test(logger, e0, model, test_loader, device)
